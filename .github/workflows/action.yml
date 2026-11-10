@@ -1,0 +1,61 @@
+name: Build and Auto-Release Keymaker
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write # Crucial permission required to allow the runner to create tags and releases
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Fetches all history for accurate tagging
+
+    - name: Generate Version Tag
+      id: tag_version
+      run: |
+        # Generates a simple timestamp-based version tag (e.g., v2026.11.10.2011)
+        $date = Get-Date -Format "yyyy.MM.dd.HHmm"
+        $version = "v$date"
+        echo "NEW_TAG=$version" >> $env:GITHUB_OUTPUT
+        echo "Created tag identifier: $version"
+      shell: powershell
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install nuitka
+        # Uncomment below if you have dependencies
+        # python -m pip install -r requirements.txt
+
+    - name: Compile with Nuitka
+      run: |
+        python -m nuitka --standalone --onefile --windows-console-title="Keymaker" keymaker.py
+
+    - name: Create GitHub Release and Upload Binary
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.tag_version.outputs.NEW_TAG }}
+        name: Release ${{ steps.tag_version.outputs.NEW_TAG }}
+        body: |
+          Automated compilation of Keymaker.
+          
+          ### Changes in this release
+          * Compiled dynamically via GitHub Actions CI/CD pipeline using Nuitka.
+          * Commit hash: ${{ github.sha }}
+        draft: false
+        prerelease: false
+        files: |
+          keymaker.exe
