@@ -39,7 +39,7 @@ jobs:
 
     - name: Compile with Nuitka
       run: |
-        python -m nuitka --standalone --onefile --windows-console-title="Keymaker" keymaker.py
+        python -m nuitka --standalone --onefile keymaker.py
 
     - name: Create GitHub Release and Upload Binary
       uses: softprops/action-gh-release@v2
